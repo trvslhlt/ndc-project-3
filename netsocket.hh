@@ -4,6 +4,28 @@
 #include <QUdpSocket>
 #include <QHostInfo>
 #include <QUuid>
+#include <QTimer>
+
+class NetSocket;
+
+class MyTimer : public QObject {
+	Q_OBJECT
+	
+public:
+	MyTimer(NetSocket *sock_, QString disPort_) {
+		sock = sock_;
+		disPort = disPort_;
+		timer = new QTimer;
+		connect(timer, SIGNAL(timeout()), this, SLOT(resendLostMessage()));
+	}
+	QTimer *timer;
+	QString disPort;
+	NetSocket *sock;
+	void start(int msec) {timer->start(msec);}
+	void stop() {timer->stop();}
+public slots:
+	void resendLostMessage();
+};
 
 class NetSocket : public QUdpSocket
 {
@@ -26,6 +48,9 @@ public:
 	quint32 seqNo;
 	QMap<QString, QVariant> myData;
 	QMap<QString, QVariant> myStatus;
+
+	QMap<QString, MyTimer *> myNeighborsTimer;
+	QMap<QString, QString> MyNeighborsLastMessage; 
 
 
 private:

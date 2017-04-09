@@ -29,6 +29,7 @@ private:
 	void sendACKDatagram(QHostAddress *disAddr, quint16 *disPort);
 	void forwardMessage(QByteArray datagram, quint16 *disPort, QString messageID);
 	void reForwardMessage(QString messageID, quint16 *disPort);
+	void resendLostMessage(QString disPort);
 };
 
 #endif // P2PAPP_MAIN_HH

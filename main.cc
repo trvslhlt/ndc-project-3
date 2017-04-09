@@ -58,17 +58,26 @@ void ChatDialog::processPendingDatagrams()
         QHostAddress disAddr;
         quint16 disPort;
 
-        qDebug() << "Haha1";
         datagram.resize(sock->pendingDatagramSize());
         sock->readDatagram(datagram.data(), datagram.size(), &disAddr, &disPort);
         QVariantMap inMap;
 		QDataStream instream(&datagram, QIODevice::ReadOnly);
 		instream >> inMap;
 
-		qDebug() << disPort;
+		qDebug() <<"disPort" << disPort;
 		int reactStatus = sock->myNeighborsStatus[QString::number(disPort)];
-		qDebug() << reactStatus;
-		// never received
+		qDebug() << "reactStatus" << reactStatus;
+
+		MyTimer *timer = sock->myNeighborsTimer[QString::number(disPort)];
+		if (!timer) {
+			sock->myNeighborsTimer[QString::number(disPort)] = new MyTimer(sock, QString::number(disPort));
+			timer = sock->myNeighborsTimer[QString::number(disPort)];
+			qDebug() << "???";
+		}
+		timer->stop();
+		qDebug() << "STOP!" << disPort;
+
+		// Never received
 		if (reactStatus == 0) {
 			if (inMap.contains("SeqNo")) {
 				qDebug() << inMap["SeqNo"] << inMap["Origin"] << "RECVD";
@@ -88,7 +97,7 @@ void ChatDialog::processPendingDatagrams()
 				sock->myData[messageID] = content;
 
 				sock->myNeighborsStatus[QString::number(disPort)] = 1;
-				qDebug() << "Haha2";
+
 				//forward Message to a random neighbor
 				forwardMessage(datagram, &disPort, seqNo + "@" + origin);
 
@@ -115,14 +124,16 @@ void ChatDialog::processPendingDatagrams()
 				}
 				sendACKDatagram(&disAddr, &disPort);
 			} else if (inMap.contains("Want")){
+				// Deserialize inside map
 				QMap<QString, QVariantMap> inMap2;
 				QDataStream instream2(&datagram, QIODevice::ReadOnly);
 				instream2 >> inMap2;
 				QMap<QString, QVariant> want = inMap2["Want"];
-				qDebug() << inMap2 << "WANT";
+
 				QMapIterator<QString, QVariant> i(want);
 				bool sentMissingMessage = false;
 
+				// Adding keys that the sender doesn't know
 				QMapIterator<QString, QVariant> i2(sock->myStatus);
 				while (i2.hasNext()) {
 				    i2.next();
@@ -130,6 +141,7 @@ void ChatDialog::processPendingDatagrams()
 				    want[i2.key()] = 1;
 				}
 
+				// Compare the information
 				while (i.hasNext()) {
 				    i.next();
 				    qDebug() << "CHECK" << i.key() << sock->myStatus[i.key()].toInt() << i.value().toInt();
@@ -145,20 +157,20 @@ void ChatDialog::processPendingDatagrams()
 
 				if (sentMissingMessage) continue;
 
-				
-
-				if (sentMissingMessage) continue;
-
 				// Send the status to receiver so the receiver know when to change status
 				// Flip a coin to forward message
 				if (reactStatus == 2) {
 					sendACKDatagram(&disAddr, &disPort);
 				}
-				if (qrand() % 2 == 1) {
+
+				// Check if it was a sender or a receiver at first palce
+				if (sock->myNeighborsOriginalMessage.contains(QString::number(disPort))) {
 					qDebug() << "FORWARD";
-					if (sock->myNeighborsOriginalMessage.contains(QString::number(disPort))) {
+					if (qrand() % 2 == 1) {
 						qDebug() << "FORWARD!!!";
+						// Store the first message sender sent, so that could forward the correct message
 						reForwardMessage(sock->myNeighborsOriginalMessage[QString::number(disPort)], &disPort);
+						sock->myNeighborsOriginalMessage.remove(QString::number(disPort));
 					}
 				}
 				sock->myNeighborsStatus[QString::number(disPort)] = 0;
@@ -211,11 +223,23 @@ void ChatDialog::createOriginMessage(QString text)
 
 	int i = qrand() % sock->myNeighbors.length();
 
+	QString messageID = v2.toString() + "@" + v3.toString();
+
 	sock->writeDatagram(datagram.data(), datagram.size(),
                          QHostAddress::LocalHost, sock->myNeighbors.at(i));
 	qDebug() << sock->myNeighbors.at(i);
 	sock->myNeighborsStatus[QString::number(sock->myNeighbors.at(i))] = 2;
-	sock->myNeighborsOriginalMessage[QString::number(sock->myNeighbors.at(i))] = v2.toString() + "@" + v3.toString();
+	sock->myNeighborsOriginalMessage[QString::number(sock->myNeighbors.at(i))] = messageID;
+
+	
+	MyTimer *timer = sock->myNeighborsTimer[QString::number(sock->myNeighbors.at(i))];
+	if (!timer) {
+		sock->myNeighborsTimer[QString::number(sock->myNeighbors.at(i))] = new MyTimer(sock, QString::number(sock->myNeighbors.at(i)));
+		timer = sock->myNeighborsTimer[QString::number(sock->myNeighbors.at(i))];
+	}
+	sock->MyNeighborsLastMessage[QString::number(sock->myNeighbors.at(i))] = messageID;
+	timer->start(1000);
+	qDebug() << "START!" << sock->myNeighbors.at(i);
 }
 
 void ChatDialog::sendMissingMessage(QString content, int seqNo, QString originName, QHostAddress *disAddr, quint16 *disPort)
@@ -237,6 +261,15 @@ void ChatDialog::sendMissingMessage(QString content, int seqNo, QString originNa
                          *disAddr, *disPort);
 
 	sock->myNeighborsStatus[QString::number(*disPort)] = 2;
+
+	QString messageID = v2.toString() + "@" + v3.toString();
+	MyTimer *timer = sock->myNeighborsTimer[QString::number(*disPort)];
+	if (!timer) {
+		sock->myNeighborsTimer[QString::number(*disPort)] = new MyTimer(sock, QString::number(*disPort));
+		timer = sock->myNeighborsTimer[QString::number(*disPort)];
+	}
+	sock->MyNeighborsLastMessage[QString::number(*disPort)] = messageID;
+	timer->start(1000);
 }
 
 void ChatDialog::sendACKDatagram(QHostAddress *disAddr, quint16 *disPort)
@@ -261,6 +294,29 @@ void ChatDialog::sendACKDatagram(QHostAddress *disAddr, quint16 *disPort)
                          *disAddr, *disPort);
 
 	sock->myNeighborsStatus[QString::number(*disPort)] = 1;
+}
+
+void MyTimer::resendLostMessage() {
+	QByteArray datagram;
+    QMap<QString, QVariant> map;
+
+    QString messageID = sock->MyNeighborsLastMessage[disPort];
+
+    QVariant v1(sock->myData[messageID].toString());
+    QVariant v2(messageID.split("@")[0]);
+    QVariant v3(messageID.split("@")[1]);
+    map["ChatText"] = v1;
+    map["SeqNo"] = v2.toInt();
+    map["Origin"] = v3;
+
+    qDebug() << messageID << v1 << "RRR";
+
+	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
+	(*stream) << map;
+	delete stream;
+
+	sock->writeDatagram(datagram.data(), datagram.size(),
+                         QHostAddress::LocalHost, disPort.toInt());
 }
 
 void ChatDialog::reForwardMessage(QString messageID, quint16 *disPort) {
@@ -299,7 +355,15 @@ void ChatDialog::forwardMessage(QByteArray datagram, quint16 *disPort, QString m
                          QHostAddress::LocalHost, sock->myNeighbors.at(i));
 	sock->myNeighborsStatus[QString::number(sock->myNeighbors.at(i))] = 2;
 	sock->myNeighborsOriginalMessage[QString::number(sock->myNeighbors.at(i))] = messageID;
-}
+
+	MyTimer *timer = sock->myNeighborsTimer[QString::number(sock->myNeighbors.at(i))];
+	if (!timer) {
+		sock->myNeighborsTimer[QString::number(sock->myNeighbors.at(i))] = new MyTimer(sock, QString::number(sock->myNeighbors.at(i)));
+		timer = sock->myNeighborsTimer[QString::number(sock->myNeighbors.at(i))];
+	}
+	sock->MyNeighborsLastMessage[QString::number(sock->myNeighbors.at(i))] = messageID;
+	timer->start(1000);
+}	
 
 int main(int argc, char **argv)
 {
