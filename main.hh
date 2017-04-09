@@ -8,8 +8,7 @@
 
 #include "netsocket.hh"
 
-class ChatDialog : public QDialog
-{
+class ChatDialog : public QDialog {
 	Q_OBJECT
 
 public:
@@ -17,7 +16,7 @@ public:
 	void setupNet();
 
 public slots:
-	void gotReturnPressed();
+	void handleReturnPressed();
 	void processPendingDatagrams();
 
 private:
