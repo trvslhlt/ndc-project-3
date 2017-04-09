@@ -24,7 +24,11 @@ private:
 	QTextEdit *textview;
 	QLineEdit *textline;
 	NetSocket *sock;
-	void sendDatagram(QString text);
+	void createOriginMessage(QString text);
+	void sendMissingMessage(QString content, int seqNo, QString originName, QHostAddress *disAddr, quint16 *disPor);
+	void sendACKDatagram(QHostAddress *disAddr, quint16 *disPort);
+	void forwardMessage(QByteArray datagram, quint16 *disPort, QString messageID);
+	void reForwardMessage(QString messageID, quint16 *disPort);
 };
 
 #endif // P2PAPP_MAIN_HH

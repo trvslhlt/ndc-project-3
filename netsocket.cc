@@ -19,6 +19,26 @@ bool NetSocket::bind()
 	// Try to bind to each of the range myPortMin..myPortMax in turn.
 	for (int p = myPortMin; p <= myPortMax; p++) {
 		if (QUdpSocket::bind(p)) {
+
+			//Setup all the basic information when bind to the port
+			myPortNo = p;
+			if (myPortNo - 1 >= myPortMin) {
+				myNeighbors.append(myPortNo - 1);
+				myNeighborsStatus[QString::number(myPortNo - 1)] = 0;
+			}
+			if (myPortNo + 1 <= myPortMax) {
+				myNeighbors.append(myPortNo + 1);
+				myNeighborsStatus[QString::number(myPortNo + 1)] = 0;
+				qDebug() << QString::number(myPortNo + 1);
+			}
+			QHostInfo info;
+			originName.append(info.localDomainName());
+			originName.append("_");
+			originName.append(QString::number(myPortNo));
+			originName.append("_");
+			originName.append(QUuid::createUuid().toString());
+			seqNo = 1;
+
 			qDebug() << "bound to UDP port " << p;
 			return true;
 		}
