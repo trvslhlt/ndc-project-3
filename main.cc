@@ -32,10 +32,6 @@ void ChatDialog::setupNet() {
 	if (!sock->bind()) {
 		exit(1);
 	}
-	// qDebug() << "myPortNo" << sock->myPortNo;
-	// for (int i = 0; i < sock->myNeighbors.length(); i++) {
-	// 	qDebug() << "myNeighbors" << sock->myNeighbors.at(i);
-	// }
 	connect(sock, SIGNAL(readyRead()),
 	this, SLOT(processPendingDatagrams()));
 }
@@ -154,7 +150,7 @@ void ChatDialog::processPendingDatagrams() {
 					sendACKDatagram(&disAddr, &disPort);
 				}
 
-				// Check if it was a sender or a receiver at first palce
+				// Check if it was a sender or a receiver in the first palce
 				if (sock->myNeighborsOriginalMessage.contains(QString::number(disPort))) {
 					qDebug() << "FORWARD";
 					if (qrand() % 2 == 1) {
@@ -182,19 +178,14 @@ void ChatDialog::handleReturnPressed() {
 	QString messageID = v.toString() + "@" + sock->originName;
 	qDebug() << sock->seqNo << "|||" << messageID;
 	sock->myData[messageID] = textline->text();
-	// qDebug() << "sock->myData[messageID]" << sock->myData[messageID];
-	// qDebug() << "sock->myStatus[sock->originName]" << sock->myStatus[sock->originName];
-
 	qDebug() << messageID << sock->myData[messageID] << "YYY";
 
 	// Send original message to a random picked neighor
 	createOriginMessage(textline->text());
-
-	// Clear the textline to get ready for the next input message.
 	textline->clear();
 }
 
-QMap<QString, QVariant> ChatDialog::marshalMessage(QString text, QString seqNo, QString originName) {
+QMap<QString, QVariant> marshalRumor(QString text, QString seqNo, QString originName) {
 	QMap<QString, QVariant> map;
 	QVariant v1(text);
 	QVariant v2(seqNo);
@@ -207,15 +198,8 @@ QMap<QString, QVariant> ChatDialog::marshalMessage(QString text, QString seqNo, 
 
 void ChatDialog::createOriginMessage(QString text) {
 	QByteArray datagram;
-	QMap<QString, QVariant> map = marshalMessage(text, QString::number(sock->seqNo++), sock->originName);
-	// QVariant v1(text);
-	// QVariant v2(sock->seqNo++);
-	// QVariant v3(sock->originName);
-	// map[CHAT_TEXT] = v1;
-	// map[SEQ_NO] = v2;
-	// map[ORIGIN] = v3;
-
-	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
+	QMap<QString, QVariant> map = marshalRumor(text, QString::number(sock->seqNo++), sock->originName);
+	QDataStream *stream = new QDataStream(&datagram, QIODevice::WriteOnly);
 	(*stream) << map;
 	delete stream;
 
@@ -241,15 +225,8 @@ void ChatDialog::createOriginMessage(QString text) {
 
 void ChatDialog::sendMissingMessage(QString content, int seqNo, QString originName, QHostAddress *disAddr, quint16 *disPort) {
 	QByteArray datagram;
-	QMap<QString, QVariant> map;
-	QVariant v1(content);
-	QVariant v2(seqNo);
-	QVariant v3(originName);
-	map[CHAT_TEXT] = v1;
-	map[SEQ_NO] = v2;
-	map[ORIGIN] = v3;
-
-	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
+	QMap<QString, QVariant> map = marshalRumor(content, QString::number(seqNo), originName);
+	QDataStream *stream = new QDataStream(&datagram, QIODevice::WriteOnly);
 	(*stream) << map;
 	delete stream;
 
@@ -257,7 +234,7 @@ void ChatDialog::sendMissingMessage(QString content, int seqNo, QString originNa
 
 	sock->myNeighborsStatus[QString::number(*disPort)] = 2;
 
-	QString messageID = v2.toString() + "@" + v3.toString();
+	QString messageID = map[SEQ_NO].toString() + "@" + map[ORIGIN].toString();
 	MyTimer *timer = sock->myNeighborsTimer[QString::number(*disPort)];
 	if (!timer) {
 		sock->myNeighborsTimer[QString::number(*disPort)] = new MyTimer(sock, QString::number(*disPort));
@@ -289,20 +266,14 @@ void ChatDialog::sendACKDatagram(QHostAddress *disAddr, quint16 *disPort) {
 
 void MyTimer::resendLostMessage() {
 	QByteArray datagram;
-	QMap<QString, QVariant> map;
 	QString messageID = sock->MyNeighborsLastMessage[disPort];
-
-	QVariant v1(sock->myData[messageID].toString());
-	QVariant v2(messageID.split("@")[0]);
-	QVariant v3(messageID.split("@")[1]);
-	map[CHAT_TEXT] = v1;
-	map[SEQ_NO] = v2.toInt();
-	map[ORIGIN] = v3;
-
-	qDebug() << messageID << v1 << "RRR";
-
-	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
+	QString text = sock->myData[messageID].toString();
+	QString seqNo = messageID.split("@")[0];
+	QString originName = messageID.split("@")[1];
+	QMap<QString, QVariant> map = marshalRumor(text, seqNo, originName);
+	QDataStream *stream = new QDataStream(&datagram, QIODevice::WriteOnly);
 	(*stream) << map;
+	qDebug() << messageID << text << "RRR";
 	delete stream;
 
 	sock->writeDatagram(datagram.data(), datagram.size(), QHostAddress::LocalHost, disPort.toInt());
@@ -310,30 +281,19 @@ void MyTimer::resendLostMessage() {
 
 void ChatDialog::reForwardMessage(QString messageID, quint16 *disPort) {
 	QByteArray datagram;
-	QMap<QString, QVariant> map;
-
-	QVariant v1(sock->myData[messageID].toString());
-	QVariant v2(messageID.split("@")[0]);
-	QVariant v3(messageID.split("@")[1]);
-	map[CHAT_TEXT] = v1;
-	map[SEQ_NO] = v2.toInt();
-	map[ORIGIN] = v3;
-
-	qDebug() << messageID << v1 << "ZZZ";
-
-	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
+	QString text = sock->myData[messageID].toString();
+	QString seqNo = messageID.split("@")[0];
+	QString originName = messageID.split("@")[1];
+	QMap<QString, QVariant> map = marshalRumor(text, seqNo, originName);
+	QDataStream *stream = new QDataStream(&datagram, QIODevice::WriteOnly);
 	(*stream) << map;
 	delete stream;
+	qDebug() << messageID << map[CHAT_TEXT] << "ZZZ";
 
 	forwardMessage(datagram, disPort, messageID);
 }
 
 void ChatDialog::forwardMessage(QByteArray datagram, quint16 *disPort, QString messageID) {
-	// QMap<QString, QVariant> map;
-	// QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
-	// (*stream) << map;
-	// delete stream;
-
 	if (sock->myNeighbors.length() == 1) return;
 	int i = qrand() % sock->myNeighbors.length();
 	while (sock->myNeighbors.at(i) == *disPort) {

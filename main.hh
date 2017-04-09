@@ -29,7 +29,10 @@ private:
 	void forwardMessage(QByteArray datagram, quint16 *disPort, QString messageID);
 	void reForwardMessage(QString messageID, quint16 *disPort);
 	void resendLostMessage(QString disPort);
-	QMap<QString, QVariant> marshalMessage(QString text, QString seqNo, QString originName);
 };
+
+QMap<QString, QVariant> marshalRumor(QString text, QString seqNo, QString originName);
+//QMap<QString, QVariant> marshalStatus(QString text, QString seqNo, QString originName);
+
 
 #endif // P2PAPP_MAIN_HH
