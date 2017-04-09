@@ -194,15 +194,26 @@ void ChatDialog::handleReturnPressed() {
 	textline->clear();
 }
 
-void ChatDialog::createOriginMessage(QString text) {
-	QByteArray datagram;
+QMap<QString, QVariant> ChatDialog::marshalMessage(QString text, QString seqNo, QString originName) {
 	QMap<QString, QVariant> map;
 	QVariant v1(text);
-	QVariant v2(sock->seqNo++);
-	QVariant v3(sock->originName);
+	QVariant v2(seqNo);
+	QVariant v3(originName);
 	map[CHAT_TEXT] = v1;
 	map[SEQ_NO] = v2;
 	map[ORIGIN] = v3;
+	return map;
+}
+
+void ChatDialog::createOriginMessage(QString text) {
+	QByteArray datagram;
+	QMap<QString, QVariant> map = marshalMessage(text, QString::number(sock->seqNo++), sock->originName);
+	// QVariant v1(text);
+	// QVariant v2(sock->seqNo++);
+	// QVariant v3(sock->originName);
+	// map[CHAT_TEXT] = v1;
+	// map[SEQ_NO] = v2;
+	// map[ORIGIN] = v3;
 
 	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
 	(*stream) << map;
@@ -210,7 +221,7 @@ void ChatDialog::createOriginMessage(QString text) {
 
 	int i = qrand() % sock->myNeighbors.length();
 
-	QString messageID = v2.toString() + "@" + v3.toString();
+	QString messageID = map[SEQ_NO].toString() + "@" + map[ORIGIN].toString();
 
 	sock->writeDatagram(datagram.data(), datagram.size(),
 	QHostAddress::LocalHost, sock->myNeighbors.at(i));
