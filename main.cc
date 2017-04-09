@@ -7,33 +7,23 @@
 
 #include "main.hh"
 
+#define SEQ_NO "SeqNo"
+#define ORIGIN "Origin"
+#define CHAT_TEXT "ChatText"
+#define WANT "Want"
+
 ChatDialog::ChatDialog() {
 	setWindowTitle("P2Papp");
-
-	// Read-only text box where we display messages from everyone.
-	// This widget expands both horizontally and vertically.
 	textview = new QTextEdit(this);
 	textview->setReadOnly(true);
-
-	// Small text-entry box the user can enter messages.
-	// This widget normally expands only horizontally,
-	// leaving extra vertical space for the textview widget.
-	//
-	// You might change this into a read/write QTextEdit,
-	// so that the user can easily enter multi-line messages.
 	textline = new QLineEdit(this);
-
-	// Lay out the widgets to appear in the main window.
-	// For Qt widget and layout concepts see:
-	// http://doc.qt.nokia.com/4.7-snapshot/widgets-and-layouts.html
 	QVBoxLayout *layout = new QVBoxLayout();
 	layout->addWidget(textview);
 	layout->addWidget(textline);
 	setLayout(layout);
+
 	sock = new NetSocket();
 
-	// Register a callback on the textline's returnPressed signal
-	// so that we can send the message entered by the user.
 	connect(textline, SIGNAL(returnPressed()),
 	this, SLOT(handleReturnPressed()));
 }
@@ -75,59 +65,55 @@ void ChatDialog::processPendingDatagrams() {
 		timer->stop();
 		qDebug() << "STOP!" << disPort;
 
-		// Never received
-		if (reactStatus == 0) {
-			if (inMap.contains("SeqNo")) {
-				qDebug() << inMap["SeqNo"] << inMap["Origin"] << "RECVD";
+		if (reactStatus == 0) { // Never received
+			if (inMap.contains(SEQ_NO)) {
+				qDebug() << inMap[SEQ_NO] << inMap[ORIGIN] << "RECVD";
 			}
 			// Make sure the received message is continuous
-			if (inMap.contains("SeqNo") && ((inMap["SeqNo"].toInt() == 1 && !sock->myStatus.contains(inMap["Origin"].toString())) || inMap["SeqNo"].toInt() - 1 == sock->myStatus[inMap["Origin"].toString()].toInt())) {
-				QString content = inMap["ChatText"].toString();
-				QString seqNo = inMap["SeqNo"].toString();
-				QString origin = inMap["Origin"].toString();
+			if (inMap.contains(SEQ_NO) && ((inMap[SEQ_NO].toInt() == 1 && !sock->myStatus.contains(inMap[ORIGIN].toString())) || inMap[ORIGIN].toInt() - 1 == sock->myStatus[inMap["Origin"].toString()].toInt())) {
+				QString content = inMap[CHAT_TEXT].toString();
+				QString seqNo = inMap[SEQ_NO].toString();
+				QString origin = inMap[ORIGIN].toString();
 				textview->append(tr("Received No%2 datagram from %3: \"%1\"")
 				.arg(content).arg(seqNo).arg(origin));
 
 				// Change status
-				QVariant v(inMap["SeqNo"]);
+				QVariant v(inMap[SEQ_NO]);
 				sock->myStatus[origin] = v;
 				QString messageID = seqNo + "@" + origin;
 				sock->myData[messageID] = content;
-
 				sock->myNeighborsStatus[QString::number(disPort)] = 1;
 
-				//forward Message to a random neighbor
 				forwardMessage(datagram, &disPort, seqNo + "@" + origin);
 			}
 			sendACKDatagram(&disAddr, &disPort);
 			// receiving && sending status
 		} else { // reactStatus != 0
-			if (reactStatus == 1 && inMap.contains("SeqNo")) {
-				int multipleConditions = (inMap["SeqNo"].toInt() == 1 && !sock->myStatus.contains(inMap["Origin"].toString())) || \
-				  inMap["SeqNo"].toInt() - 1 == sock->myStatus[inMap["Origin"].toString()].toInt();
+			if (reactStatus == 1 && inMap.contains(SEQ_NO)) {
+				int multipleConditions = (inMap[SEQ_NO].toInt() == 1 && !sock->myStatus.contains(inMap[ORIGIN].toString())) || \
+				  inMap[SEQ_NO].toInt() - 1 == sock->myStatus[inMap[ORIGIN].toString()].toInt();
 				if (multipleConditions) {
-					QString content = inMap["ChatText"].toString();
-					QString seqNo = inMap["SeqNo"].toString();
-					QString origin = inMap["Origin"].toString();
+					QString content = inMap[CHAT_TEXT].toString();
+					QString seqNo = inMap[SEQ_NO].toString();
+					QString origin = inMap[ORIGIN].toString();
 					textview->append(tr("Received No%2 datagram from %3: \"%1\"")
 					.arg(content).arg(seqNo).arg(origin));
 
 					// Change status
-					QVariant v(inMap["SeqNo"]);
+					QVariant v(inMap[SEQ_NO]);
 					sock->myStatus[origin] = v;
 					QString messageID = seqNo + "@" + origin;
 					sock->myData[messageID] = content;
 
-					//forward Message to a random neighbor
 					forwardMessage(datagram, &disPort, seqNo + "@" + origin);
 				}
 				sendACKDatagram(&disAddr, &disPort);
-			} else if (inMap.contains("Want")){
+			} else if (inMap.contains(WANT)){
 				// Deserialize inside map
 				QMap<QString, QVariantMap> inMap2;
 				QDataStream instream2(&datagram, QIODevice::ReadOnly);
 				instream2 >> inMap2;
-				QMap<QString, QVariant> want = inMap2["Want"];
+				QMap<QString, QVariant> want = inMap2[WANT];
 
 				QMapIterator<QString, QVariant> i(want);
 				bool sentMissingMessage = false;
@@ -186,8 +172,6 @@ void ChatDialog::processPendingDatagrams() {
 }
 
 void ChatDialog::handleReturnPressed() {
-	// Initially, just echo the string locally.
-	// Insert some networking code here...
 	qDebug() << "FIX: send message to other peers: " << textline->text();
 	textview->append(tr("Received No%2 datagram from %3: \"%1\"")
 		.arg(textline->text()).arg(sock->seqNo).arg(sock->originName));
@@ -216,9 +200,9 @@ void ChatDialog::createOriginMessage(QString text) {
 	QVariant v1(text);
 	QVariant v2(sock->seqNo++);
 	QVariant v3(sock->originName);
-	map["ChatText"] = v1;
-	map["SeqNo"] = v2;
-	map["Origin"] = v3;
+	map[CHAT_TEXT] = v1;
+	map[SEQ_NO] = v2;
+	map[ORIGIN] = v3;
 
 	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
 	(*stream) << map;
@@ -233,7 +217,6 @@ void ChatDialog::createOriginMessage(QString text) {
 	qDebug() << sock->myNeighbors.at(i);
 	sock->myNeighborsStatus[QString::number(sock->myNeighbors.at(i))] = 2;
 	sock->myNeighborsOriginalMessage[QString::number(sock->myNeighbors.at(i))] = messageID;
-
 
 	MyTimer *timer = sock->myNeighborsTimer[QString::number(sock->myNeighbors.at(i))];
 	if (!timer) {
@@ -251,9 +234,9 @@ void ChatDialog::sendMissingMessage(QString content, int seqNo, QString originNa
 	QVariant v1(content);
 	QVariant v2(seqNo);
 	QVariant v3(originName);
-	map["ChatText"] = v1;
-	map["SeqNo"] = v2;
-	map["Origin"] = v3;
+	map[CHAT_TEXT] = v1;
+	map[SEQ_NO] = v2;
+	map[ORIGIN] = v3;
 
 	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
 	(*stream) << map;
@@ -282,7 +265,7 @@ void ChatDialog::sendACKDatagram(QHostAddress *disAddr, quint16 *disPort) {
 		i.next();
 		status[i.key()] = i.value().toInt() + 1;
 	}
-	map["Want"] = status;
+	map[WANT] = status;
 	qDebug() << "ACK" << map;
 
 	QDataStream * stream = new QDataStream(&datagram, QIODevice::WriteOnly);
@@ -301,9 +284,9 @@ void MyTimer::resendLostMessage() {
 	QVariant v1(sock->myData[messageID].toString());
 	QVariant v2(messageID.split("@")[0]);
 	QVariant v3(messageID.split("@")[1]);
-	map["ChatText"] = v1;
-	map["SeqNo"] = v2.toInt();
-	map["Origin"] = v3;
+	map[CHAT_TEXT] = v1;
+	map[SEQ_NO] = v2.toInt();
+	map[ORIGIN] = v3;
 
 	qDebug() << messageID << v1 << "RRR";
 
@@ -321,9 +304,9 @@ void ChatDialog::reForwardMessage(QString messageID, quint16 *disPort) {
 	QVariant v1(sock->myData[messageID].toString());
 	QVariant v2(messageID.split("@")[0]);
 	QVariant v3(messageID.split("@")[1]);
-	map["ChatText"] = v1;
-	map["SeqNo"] = v2.toInt();
-	map["Origin"] = v3;
+	map[CHAT_TEXT] = v1;
+	map[SEQ_NO] = v2.toInt();
+	map[ORIGIN] = v3;
 
 	qDebug() << messageID << v1 << "ZZZ";
 
