@@ -8,8 +8,7 @@
 
 #include "netsocket.hh"
 
-class ChatDialog : public QDialog
-{
+class ChatDialog : public QDialog {
 	Q_OBJECT
 
 public:
@@ -17,7 +16,7 @@ public:
 	void setupNet();
 
 public slots:
-	void gotReturnPressed();
+	void handleReturnPressed();
 	void processPendingDatagrams();
 
 private:
@@ -26,10 +25,13 @@ private:
 	NetSocket *sock;
 	void createOriginMessage(QString text);
 	void sendMissingMessage(QString content, int seqNo, QString originName, QHostAddress *disAddr, quint16 *disPor);
-	void sendACKDatagram(QHostAddress *disAddr, quint16 *disPort);
+	void sendACKDatagram(QHostAddress *destAddr, quint16 *destPort);
 	void forwardMessage(QByteArray datagram, quint16 *disPort, QString messageID);
 	void reForwardMessage(QString messageID, quint16 *disPort);
 	void resendLostMessage(QString disPort);
+	void sendMessage(QMap<QString, QVariant> messageMap, QHostAddress *destAddr, quint16 *destPort);
 };
+
+QMap<QString, QVariant> marshalRumor(QString text, QString seqNo, QString originName);
 
 #endif // P2PAPP_MAIN_HH
