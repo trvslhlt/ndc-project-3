@@ -37,7 +37,6 @@ public:
 	// Bind this socket to a P2Papp-specific default port.
 	bool bind();
 
-	int myPortMin, myPortMax;
 	int myPortNo;
 	QList<int> myNeighbors;
 	// Define on the send/receive status of the neighors
@@ -54,7 +53,7 @@ public:
 
 
 private:
-	// int myPortMin, myPortMax;
+	int myPortMin, myPortMax;
 };
 
 #endif // NETSOCKET_HH

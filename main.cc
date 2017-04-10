@@ -67,27 +67,25 @@ void ChatDialog::processPendingDatagrams() {
 
 		if (reactStatus == 0) { // Never received
 			if (inMap.contains(SEQ_NO)) {
-				qDebug() << inMap[SEQ_NO] << inMap[ORIGIN] << "RECVD";
-			}
-			// Make sure the received message is continuous
-			if (inMap.contains(SEQ_NO) && ((inMap[SEQ_NO].toInt() == 1 && !sock->myStatus.contains(inMap[ORIGIN].toString())) || inMap[ORIGIN].toInt() - 1 == sock->myStatus[inMap["Origin"].toString()].toInt())) {
-				QString content = inMap[CHAT_TEXT].toString();
-				QString seqNo = inMap[SEQ_NO].toString();
-				QString origin = inMap[ORIGIN].toString();
-				textview->append(tr("Received No%2 datagram from %3: \"%1\"")
-				.arg(content).arg(seqNo).arg(origin));
-
-				// Change status
-				QVariant v(inMap[SEQ_NO]);
-				sock->myStatus[origin] = v;
-				QString messageID = seqNo + "@" + origin;
-				sock->myData[messageID] = content;
 				sock->myNeighborsStatus[QString::number(disPort)] = 1;
+				// Make sure the received message is continuous
+				if ((inMap[SEQ_NO].toInt() == 1 && !sock->myStatus.contains(inMap[ORIGIN].toString())) || inMap[ORIGIN].toInt() - 1 == sock->myStatus[inMap["Origin"].toString()].toInt()) {
+					QString content = inMap[CHAT_TEXT].toString();
+					QString seqNo = inMap[SEQ_NO].toString();
+					QString origin = inMap[ORIGIN].toString();
+					textview->append(tr("Received No%2 datagram from %3: \"%1\"")
+					.arg(content).arg(seqNo).arg(origin));
 
-				forwardMessage(datagram, &disPort, seqNo + "@" + origin);
-			}
-			sendACKDatagram(&disAddr, &disPort);
-			// receiving && sending status
+					// Change status
+					QVariant v(inMap[SEQ_NO]);
+					sock->myStatus[origin] = v;
+					QString messageID = seqNo + "@" + origin;
+					sock->myData[messageID] = content;
+
+					forwardMessage(datagram, &disPort, seqNo + "@" + origin);	
+					}
+					sendACKDatagram(&disAddr, &disPort);
+			}		
 		} else { // reactStatus != 0
 			if (reactStatus == 1 && inMap.contains(SEQ_NO)) {
 				int multipleConditions = (inMap[SEQ_NO].toInt() == 1 && !sock->myStatus.contains(inMap[ORIGIN].toString())) || \
