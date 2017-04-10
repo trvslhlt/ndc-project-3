@@ -83,8 +83,8 @@ void ChatDialog::processPendingDatagrams() {
 					sock->myData[messageID] = content;
 
 					forwardMessage(datagram, &disPort, seqNo + "@" + origin);	
-					}
-					sendACKDatagram(&disAddr, &disPort);
+				}
+				sendACKDatagram(&disAddr, &disPort);
 			}		
 		} else { // reactStatus != 0
 			if (reactStatus == 1 && inMap.contains(SEQ_NO)) {
