@@ -1,17 +1,13 @@
-
 #include <unistd.h>
-
 #include <QVBoxLayout>
 #include <QApplication>
 #include <QDebug>
-
 #include "main.hh"
 
 #define SEQ_NO "SeqNo"
 #define ORIGIN "Origin"
 #define CHAT_TEXT "ChatText"
 #define WANT "Want"
-
 
 ChatDialog::ChatDialog() {
 	setWindowTitle("P2Papp");

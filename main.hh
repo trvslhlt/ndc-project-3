@@ -25,7 +25,7 @@ private:
 	NetSocket *sock;
 	void createOriginMessage(QString text);
 	void sendMissingMessage(QString content, int seqNo, QString originName, QHostAddress *disAddr, quint16 *disPor);
-	void sendACKDatagram(QHostAddress *disAddr, quint16 *disPort);
+	void sendACKDatagram(QHostAddress *destAddr, quint16 *destPort);
 	void forwardMessage(QByteArray datagram, quint16 *disPort, QString messageID);
 	void reForwardMessage(QString messageID, quint16 *disPort);
 	void resendLostMessage(QString disPort);
