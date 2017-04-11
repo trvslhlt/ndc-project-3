@@ -47,7 +47,8 @@ bool NetSocket::bind() {
 	return false;
 }
 
-AntientropyTimer::AntientropyTimer(int interval_) {
+AntientropyTimer::AntientropyTimer(int interval_, NetSocket *sock_) {
+	sock = sock_;
 	timer = new QTimer;
 	timer->setInterval(interval_);
 	connect(timer, SIGNAL(timeout()), this, SLOT(didTimeoutAntientropy()));

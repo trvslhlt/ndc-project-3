@@ -11,11 +11,12 @@ class NetSocket;
 class AntientropyTimer : public QObject {
 	Q_OBJECT
 public:
-	AntientropyTimer(int interval_);
+	AntientropyTimer(int interval_, NetSocket *sock_);
 	void stop();
 private:
 	int interval;
 	QTimer *timer;
+	NetSocket *sock;
 public slots:
 	void didTimeoutAntientropy();
 };

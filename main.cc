@@ -295,12 +295,24 @@ void ChatDialog::forwardMessage(QByteArray datagram, quint16 *disPort, QString m
 }
 
 void ChatDialog::configureAntiEntropy() {
-  qDebug() << "configureAntiEntropy";
-	antientropyTimer = new AntientropyTimer(10000);
+	antientropyTimer = new AntientropyTimer(1000, sock);
 }
 
 void AntientropyTimer::didTimeoutAntientropy() {
   qDebug() << "didTimeoutAntientropy";
+	// choose random neighbor
+	int i = qrand() % sock->myNeighbors.length();
+	qDebug() << "neighborCount:" << sock->myNeighbors.length();
+	qDebug() << "neighbor" << i;
+	// if (sock->myNeighborsOriginalMessage.contains(QString::number(disPort))) {
+	// 	qDebug() << "FORWARD";
+	// 	if (qrand() % 2 == 1) {
+	// 		qDebug() << "FORWARD!!!";
+	// 		// Store the first message sender sent, so that could forward the correct message
+	// 		reForwardMessage(sock->myNeighborsOriginalMessage[QString::number(disPort)], &disPort);
+	// 		sock->myNeighborsOriginalMessage.remove(QString::number(disPort));
+	// 	}
+	// }
 }
 
 QMap<QString, QVariant> marshalRumor(QString text, QString seqNo, QString originName) {
