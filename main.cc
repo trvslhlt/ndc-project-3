@@ -82,10 +82,10 @@ void ChatDialog::processPendingDatagrams() {
 					QString messageID = seqNo + "@" + origin;
 					sock->myData[messageID] = content;
 
-					forwardMessage(datagram, &disPort, seqNo + "@" + origin);	
+					forwardMessage(datagram, &disPort, seqNo + "@" + origin);
 				}
 				sendACKDatagram(&disAddr, &disPort);
-			}		
+			}
 		} else { // reactStatus != 0
 			if (reactStatus == 1 && inMap.contains(SEQ_NO)) {
 				int multipleConditions = (inMap[SEQ_NO].toInt() == 1 && !sock->myStatus.contains(inMap[ORIGIN].toString())) || \
@@ -294,6 +294,15 @@ void ChatDialog::forwardMessage(QByteArray datagram, quint16 *disPort, QString m
 	timer->start(1000);
 }
 
+void ChatDialog::configureAntiEntropy() {
+  qDebug() << "configureAntiEntropy";
+	antientropyTimer = new AntientropyTimer(10000);
+}
+
+void AntientropyTimer::didTimeoutAntientropy() {
+  qDebug() << "didTimeoutAntientropy";
+}
+
 QMap<QString, QVariant> marshalRumor(QString text, QString seqNo, QString originName) {
 	QMap<QString, QVariant> map;
 	QVariant v1(text);
@@ -310,5 +319,6 @@ int main(int argc, char **argv) {
 	ChatDialog dialog; // Create an initial chat dialog window
 	dialog.show();
 	dialog.setupNet();
+	dialog.configureAntiEntropy();
 	return app.exec(); // Enter the Qt main loop; everything else is event driven
 }

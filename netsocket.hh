@@ -8,9 +8,21 @@
 
 class NetSocket;
 
+class AntientropyTimer : public QObject {
+	Q_OBJECT
+public:
+	AntientropyTimer(int interval_);
+	void stop();
+private:
+	int interval;
+	QTimer *timer;
+public slots:
+	void didTimeoutAntientropy();
+};
+
 class MyTimer : public QObject {
 	Q_OBJECT
-	
+
 public:
 	MyTimer(NetSocket *sock_, QString disPort_) {
 		sock = sock_;
@@ -27,8 +39,7 @@ public slots:
 	void resendLostMessage();
 };
 
-class NetSocket : public QUdpSocket
-{
+class NetSocket : public QUdpSocket {
 	Q_OBJECT
 
 public:
@@ -49,7 +60,7 @@ public:
 	QMap<QString, QVariant> myStatus;
 
 	QMap<QString, MyTimer *> myNeighborsTimer;
-	QMap<QString, QString> MyNeighborsLastMessage; 
+	QMap<QString, QString> MyNeighborsLastMessage;
 
 
 private:

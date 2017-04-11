@@ -1,8 +1,7 @@
 #include "netsocket.hh"
 #include <unistd.h>
 #include <sys/types.h>
-NetSocket::NetSocket()
-{
+NetSocket::NetSocket() {
 	// Pick a range of four UDP ports to try to allocate by default,
 	// computed based on my Unix user ID.
 	// This makes it trivial for up to four P2Papp instances per user
@@ -14,8 +13,7 @@ NetSocket::NetSocket()
 	myPortMax = myPortMin + 3;
 }
 
-bool NetSocket::bind()
-{
+bool NetSocket::bind() {
 	// Try to bind to each of the range myPortMin..myPortMax in turn.
 	for (int p = myPortMin; p <= myPortMax; p++) {
 		if (QUdpSocket::bind(p)) {
@@ -47,4 +45,15 @@ bool NetSocket::bind()
 	qDebug() << "Oops, no ports in my default range " << myPortMin
 		<< "-" << myPortMax << " available";
 	return false;
+}
+
+AntientropyTimer::AntientropyTimer(int interval_) {
+	timer = new QTimer;
+	timer->setInterval(interval_);
+	connect(timer, SIGNAL(timeout()), this, SLOT(didTimeoutAntientropy()));
+	timer->start();
+}
+
+void AntientropyTimer::stop() {
+	timer->stop();
 }

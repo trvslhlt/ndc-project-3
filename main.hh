@@ -18,11 +18,12 @@ public:
 public slots:
 	void handleReturnPressed();
 	void processPendingDatagrams();
-
+	void configureAntiEntropy();
 private:
 	QTextEdit *textview;
 	QLineEdit *textline;
 	NetSocket *sock;
+	AntientropyTimer *antientropyTimer;
 	void createOriginMessage(QString text);
 	void sendMissingMessage(QString content, int seqNo, QString originName, QHostAddress *disAddr, quint16 *disPor);
 	void sendACKDatagram(QHostAddress *destAddr, quint16 *destPort);
@@ -30,6 +31,7 @@ private:
 	void reForwardMessage(QString messageID, quint16 *disPort);
 	void resendLostMessage(QString disPort);
 	void sendMessage(QMap<QString, QVariant> messageMap, QHostAddress *destAddr, quint16 *destPort);
+	void didTimeoutAntientropy();
 };
 
 QMap<QString, QVariant> marshalRumor(QString text, QString seqNo, QString originName);
