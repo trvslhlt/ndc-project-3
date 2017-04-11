@@ -7,16 +7,18 @@
 #include <QTimer>
 
 class NetSocket;
+class ChatDialog;
 
 class AntientropyTimer : public QObject {
 	Q_OBJECT
 public:
-	AntientropyTimer(int interval_, NetSocket *sock_);
+	AntientropyTimer(int interval_, NetSocket *sock_, ChatDialog *chat_);
 	void stop();
 private:
 	int interval;
 	QTimer *timer;
 	NetSocket *sock;
+	ChatDialog *chat;
 public slots:
 	void didTimeoutAntientropy();
 };
@@ -59,7 +61,7 @@ public:
 	quint32 seqNo;
 	QMap<QString, QVariant> myData;
 	QMap<QString, QVariant> myStatus;
-
+  QMap<QString, QHostAddress> myNeighborsAddress;
 	QMap<QString, MyTimer *> myNeighborsTimer;
 	QMap<QString, QString> MyNeighborsLastMessage;
 
